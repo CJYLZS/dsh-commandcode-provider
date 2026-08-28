@@ -25,6 +25,26 @@ for (const plan of ["goat", "pro", "max"]) {
   }
 }
 
+// Field difference: plain /v1/models (no catalog) vs catalog-enriched.
+console.log("\n=== v1/models only (catalog omitted, plan=max) ===");
+const plain = buildEntries({ apiList, catalog: [], plan: "max", extraIds: [] });
+const shown = new Set(["deepseek/deepseek-v4-flash", "deepseek/deepseek-v4-flash-vision-exp", "MiniMaxAI/MiniMax-M2.7", "claude-sonnet-5"]);
+for (const e of plain.openai.concat(plain.anthropic)) {
+  if (shown.has(e.id)) console.log(" ", JSON.stringify(e));
+}
+console.log("reasoningEfforts:false count:", plain.openai.filter((e) => e.reasoningEfforts === false).length, "(0 without catalog)");
+console.log("vision count:", plain.openai.filter((e) => e.input?.includes("image")).length, "(0 without catalog)");
+console.log("anthropic route count:", plain.anthropic.length, "(claude-id heuristic only)");
+
+console.log("\n=== with catalog (plan=max, includeReasoningEfforts) ===");
+const rich = buildEntries({ apiList, catalog, plan: "max", extraIds: [], includeReasoningEfforts: true });
+for (const e of rich.openai.concat(rich.anthropic)) {
+  if (shown.has(e.id)) console.log(" ", JSON.stringify(e));
+}
+console.log("reasoningEfforts:false count:", rich.openai.filter((e) => e.reasoningEfforts === false).length);
+console.log("vision count:", rich.openai.filter((e) => e.input?.includes("image")).length);
+console.log("identity map count:", rich.openai.filter((e) => e.reasoningEfforts && e.reasoningEfforts !== false).length);
+
 // Patch shapes: goat provider + max anthropic provider + extraIds.
 const byRouteGoat = buildEntries({ apiList, catalog, plan: "goat", extraIds: ["custom/private-model"] });
 const oa = buildRoutePatch({ key: providerKey("goat", "openai"), route: "openai", entries: byRouteGoat.openai }, {});

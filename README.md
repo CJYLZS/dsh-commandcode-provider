@@ -35,14 +35,10 @@
 
 ## 安装
 
-```sh
-pnpm dsh plugin --profile <profile名> add file:./.tmp/dsh-commandcode-plan-autosync
-```
-
-发布到 GitHub 后可用：
+推荐直接从 GitHub 安装（`web` profile）：
 
 ```sh
-pnpm dsh plugin --profile <profile名> add github:CJYLZS/dsh-commandcode-plan-autosync
+pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-plan-autosync
 ```
 
 安装后重启 DSH Web，进入 设置 → 模型供应商，找到「CommandCode 计划同步」卡片：选择订阅类型（默认 goat），点击 **一键创建/更新**。

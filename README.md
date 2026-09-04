@@ -73,14 +73,19 @@ After install, restart dsh Web and go to Settings → Model Providers → find t
 
 ## API key setup
 
-The plugin reads the `COMMANDCODE_API_KEY` environment variable by default (rename via plugin config `targetApiKeyEnv`).
+After you click **Create / Update**, the plugin auto-creates a model provider for your tier — `commandcode-goat-autosync` by default (with `commandcode-pro-…` / `commandcode-max-…` for the other tiers). That provider is where the API key goes.
 
-Two ways to configure the key in dsh:
+**Recommended — via the dsh Models page:**
 
-1. **Credential management** (recommended): configure a credential for `llm-pi-ai`'s `apiKeyEnv` (`COMMANDCODE_API_KEY`) in dsh settings — the key only enters `.credentials.yaml`, never `settings.yaml`.
-2. **Environment variable**: `export COMMANDCODE_API_KEY=cmd_xxx` before starting dsh.
+1. In dsh, go to **Settings → Models** (the page lists every provider, including the one this plugin created).
+2. Find **`commandcode-goat-autosync`** (or your tier's provider) and click **Edit**.
+3. Paste your CommandCode API key into the **API key** field and **Save**.
 
-Keys are created on the [commandcode.ai](https://commandcode.ai) Studio API keys page (all tiers except Go; GOAT/Pro/Max bill against subscription credits, Provider plans are pay-as-you-go).
+That's it — the key is stored in dsh's credential store and is used for chat, web search, and the usage card alike.
+
+**Alternative — environment variable:** `export COMMANDCODE_API_KEY=cmd_xxx` before starting dsh. (The plugin's config option `targetApiKeyEnv` renames the variable it reads.)
+
+Where does the key come from? Create one on the [commandcode.ai](https://commandcode.ai) Studio API keys page (all tiers except Go; GOAT/Pro/Max bill against subscription credits, Provider plans are pay-as-you-go).
 
 ## Configuration
 
@@ -186,14 +191,19 @@ pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider
 
 ## API Key 配置
 
-插件默认读取环境变量 `COMMANDCODE_API_KEY`（可通过插件配置 `targetApiKeyEnv` 修改名字）。
+点击「一键创建/更新」后，插件会自动创建对应档位的**模型供应商**——默认是 `commandcode-goat-autosync`（其它档位为 `commandcode-pro-…` / `commandcode-max-…`）。API key 就配在这个自动创建的供应商上。
 
-在 DSH 中配置密钥的方式二选一：
+**推荐方式——在 dsh 的模型页配置：**
 
-1. **凭据管理**（推荐）：在 DSH 设置里为 `llm-pi-ai` 的 `apiKeyEnv`（`COMMANDCODE_API_KEY`）配置凭据值，密钥只进入 `.credentials.yaml`，不会写入 `settings.yaml`。
-2. **环境变量**：启动 DSH 前 `export COMMANDCODE_API_KEY=cmd_xxx`。
+1. 进入 dsh 的 **设置 → 模型**（该页列出所有供应商，包括本插件自动创建的）。
+2. 找到 **`commandcode-goat-autosync`**（或你档位对应的供应商），点击 **编辑**。
+3. 在 **API 密钥** 输入框粘贴你的 CommandCode API key，点击 **保存**。
 
-Key 在 [commandcode.ai](https://commandcode.ai) Studio 的 API keys 页面创建（除 Go 计划外均可用；GOAT/Pro/Max 按套餐额度计费，Provider 计划按量付费）。
+完成。key 会存入 dsh 的凭据库，聊天、web 搜索和用量卡片共用这一把。
+
+**备选方式——环境变量：** 启动 dsh 前 `export COMMANDCODE_API_KEY=cmd_xxx`。（插件配置项 `targetApiKeyEnv` 可修改它读取的变量名。）
+
+Key 从哪来？在 [commandcode.ai](https://commandcode.ai) Studio 的 API keys 页面创建（除 Go 计划外均可用；GOAT/Pro/Max 按套餐额度计费，Provider 计划按量付费）。
 
 ## 配置项
 

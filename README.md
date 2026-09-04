@@ -15,6 +15,8 @@ One-click sync of [CommandCode](https://commandcode.ai) subscription-tier models
 - **The official `/provider/v1/models` endpoint returns only id / name / context_length** — no reasoning or vision capability info. This plugin additionally parses the complete per-model catalog embedded in the official [GOAT plan page](https://commandcode.ai/docs/plans/goat) (`reasoning` / `vision` / `caps` / four pricing fields / min plan) and maps capabilities correctly into dsh config.
 - **Subscription tiers**: CommandCode has multiple tiers (Go / GOAT / Pro / Max); models accrue by `minPlanName`. The plugin offers a "Subscription" dropdown; each tier maps to its **own independent model provider**, so tiers never overwrite each other.
 - **Mixed routing**: CommandCode serves both an OpenAI-compatible (`/chat/completions`) and an Anthropic-compatible (`/messages`) endpoint; sending Claude models to the wrong endpoint returns 400. The plugin splits models automatically: Claude models go into `commandcode-<plan>-anthropic` (`api: anthropic-messages`), everything else into `commandcode-<plan>-autosync` (`api: openai-completions`).
+- **Web search without a second API key**: stock dsh needs a separate `DEEPSEEK_API_KEY` before the model's `web_search` tool works at all. This plugin serves the same tool from your CommandCode account key, so one subscription covers chat and search — no dsh search key to configure or pay for.
+- **Account usage at a glance**: the settings card shows live CommandCode usage (five-hour/weekly window limits with progress bars, monthly credits, request/cost/token totals), so you can see a rate-limit or out-of-credits wall coming before you hit it.
 
 ## Tiers and providers
 
@@ -126,6 +128,8 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 - **官方的 `/provider/v1/models` 接口只返回 id / name / context_length**，没有任何推理（thinking）或视觉能力信息。插件额外解析官方 [GOAT 计划页](https://commandcode.ai/docs/plans/goat) 内嵌的完整目录（每模型含 `reasoning` / `vision` / `caps` / 四项定价 / 最低计划要求），把能力正确映射进 DSH 配置。
 - **订阅分档**：CommandCode 区分多个档位（Go / GOAT / Pro / Max），模型按 `minPlanName` 累计归属。插件提供「订阅类型」下拉框，每个档位对应**独立的模型供应商**，互不覆盖。
 - **混合路由问题**：CommandCode 提供 OpenAI 兼容（`/chat/completions`）与 Anthropic 兼容（`/messages`）两套端点，Claude 系列走错端点会直接 400。插件按模型自动拆分：Claude 进 `commandcode-<档位>-anthropic`（`api: anthropic-messages`），其余进 `commandcode-<档位>-autosync`（`api: openai-completions`）。
+- **搜索无需第二把 API key**：原版 dsh 要单独的 `DEEPSEEK_API_KEY`，模型的 `web_search` 工具才能用。本插件直接用你的 CommandCode 账户 key 提供同一个搜索工具——一个订阅同时覆盖聊天和搜索，不用再配置、再付费买 dsh 的搜索 key。
+- **用量一眼可见**：设置卡片直接展示 CommandCode 实时用量（5 小时/周窗口限额带进度条、本月剩余额度、请求/成本/Token 汇总），限流或额度耗尽之前就能提前看到。
 
 ## 订阅档位与供应商
 

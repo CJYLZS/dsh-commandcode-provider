@@ -1,4 +1,4 @@
-# dsh-commandcode-plan-autosync — one-click create/update of CommandCode plan
+# dsh-commandcode-provider — one-click create/update of CommandCode plan
 # providers under llm-pi-ai. Each subscription tier maps to its own provider:
 #   goat -> commandcode-goat-autosync (43 models, open models)
 #   pro  -> commandcode-pro-autosync  (56 models; +Claude/GPT/Gemini premium)
@@ -7,8 +7,8 @@
 # (api: anthropic-messages) because CommandCode serves them on /messages.
 # Owns no provider itself; writes only into llm-pi-ai's settings section.
 - insert:
-    - id: dsh-commandcode-plan-autosync
-      name: dsh-commandcode-plan-autosync
+    - id: dsh-commandcode-provider
+      name: dsh-commandcode-provider
       config:
         sourceURL: https://api.commandcode.ai/provider/v1/models
         catalogURL: https://commandcode.ai/docs/plans/goat

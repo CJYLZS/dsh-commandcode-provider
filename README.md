@@ -1,4 +1,4 @@
-# dsh-commandcode-plan-autosync
+# dsh-commandcode-provider
 
 **English** | [简体中文](#简体中文)
 
@@ -58,7 +58,7 @@ The settings card also shows **account usage** — requests, success rate, cost,
 Install directly from GitHub (recommended, `web` profile):
 
 ```sh
-pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-plan-autosync
+pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider
 ```
 
 After install, restart dsh Web and go to Settings → Model Providers → find the **CommandCode Plan Sync** card: choose the subscription (default goat), click **Create / Update**.
@@ -108,7 +108,7 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 # 简体中文
 
-[English](#dsh-commandcode-plan-autosync) | **简体中文**
+[English](#dsh-commandcode-provider) | **简体中文**
 
 一键把 [CommandCode](https://commandcode.ai) 所选订阅档位的模型同步到 DeepSeek Harness 的 `llm-pi-ai` 供应商配置中，并在设置页提供「一键创建/更新」按钮。已存在目标供应商时只刷新模型列表，用户配置的密钥与地址保持不变。
 
@@ -163,7 +163,7 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 推荐直接从 GitHub 安装（`web` profile）：
 
 ```sh
-pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-plan-autosync
+pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider
 ```
 
 安装后重启 DSH Web，进入 设置 → 模型供应商，找到「CommandCode 计划同步」卡片：选择订阅类型（默认 goat），点击 **一键创建/更新**。

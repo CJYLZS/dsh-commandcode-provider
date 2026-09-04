@@ -1,5 +1,115 @@
 # dsh-commandcode-plan-autosync
 
+**English** | [简体中文](#简体中文)
+
+[![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-4D6BFE?style=flat-square)](https://github.com/deepseek-ai/deepseek-harness)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+One-click sync of [CommandCode](https://commandcode.ai) subscription-tier models into DeepSeek Harness' `llm-pi-ai` provider configuration, with a "Create / Update" button in the settings page. Existing target providers are only refreshed (model list updated) — your configured keys and base URLs are preserved.
+
+## Why this plugin
+
+- **dsh's `llm-pi-ai` provider catalog is a static snapshot** that never refreshes itself. CommandCode's [Provider API](https://commandcode.ai/docs/provider) currently lists 61 models and grows continuously (each with its own context/pricing/capabilities). Hand-copying them into `settings.yaml` is impractical and goes stale.
+- **The official `/provider/v1/models` endpoint returns only id / name / context_length** — no reasoning or vision capability info. This plugin additionally parses the complete per-model catalog embedded in the official [GOAT plan page](https://commandcode.ai/docs/plans/goat) (`reasoning` / `vision` / `caps` / four pricing fields / min plan) and maps capabilities correctly into dsh config.
+- **Subscription tiers**: CommandCode has multiple tiers (Go / GOAT / Pro / Max); models accrue by `minPlanName`. The plugin offers a "Subscription" dropdown; each tier maps to its **own independent model provider**, so tiers never overwrite each other.
+- **Mixed routing**: CommandCode serves both an OpenAI-compatible (`/chat/completions`) and an Anthropic-compatible (`/messages`) endpoint; sending Claude models to the wrong endpoint returns 400. The plugin splits models automatically: Claude models go into `commandcode-<plan>-anthropic` (`api: anthropic-messages`), everything else into `commandcode-<plan>-autosync` (`api: openai-completions`).
+
+## Tiers and providers
+
+| Subscription (dropdown) | Total models | Includes | Generated providers |
+| --- | --- | --- | --- |
+| `goat` (default) | 43 | Go + GOAT open models (no Claude) | `commandcode-goat-autosync` |
+| `pro` | 56 | everything in goat + Pro tier (Claude Sonnet/Haiku, GPT, Gemini, …) | `commandcode-pro-autosync` + `commandcode-pro-anthropic` |
+| `max` | 61 | all models (incl. Claude Opus/Fable, Fugu Ultra) | `commandcode-max-autosync` + `commandcode-max-anthropic` |
+
+Tiers are **cumulative** (defined by the `minPlanName` field, matching the official docs: the Pro page states "includes everything in the GOAT plan"). The Go tier offers no API access (403) so it is not an option.
+
+## Mapping rules (upstream → llm-pi-ai YAML)
+
+| Upstream (official catalog) | llm-pi-ai model field |
+| --- | --- |
+| `contextWindow` / `context_length` | `contextWindow` |
+| `vision: true` | `input: ["text", "image"]` (else `["text"]`) |
+| `reasoning: false` | `reasoningEfforts: false` (disable thinking parameters) |
+| `reasoning: true` | no `reasoningEfforts` written; governed by provider `compat.supportsReasoningEffort` |
+| `minPlanName` | filters models by the selected tier |
+| `vendor: Anthropic` (or id starting with `claude-`) | routed into the `api: anthropic-messages` provider |
+| everything else | routed into the `api: openai-completions` provider |
+
+The official catalog has no per-model reasoning-effort list (e.g. `low/medium/high`), so the plugin does not invent one; `reasoning: true` models rely on the provider-level `compat: {thinkingFormat: "openai", supportsReasoningEffort: true}` (overridable via `targetCompat`).
+
+## Web search (optional)
+
+When enabled, the plugin's **Command Code search provider** backs dsh's model-facing `web_search` tool via the Command Code Provider API's `/alpha/web-search` endpoint — the **same API key and account** as your chat traffic, so no separate search key or endpoint is configured.
+
+- Served on the dsh web seam (`ctx.web`) as provider id `commandcode`, and auto-selected while the toggle is on (restoring the previous search provider when toggled off or when the plugin unloads).
+- `numResults` is clamped to Command Code's range (1–10, default 5); results map to dsh's `WebSearchSource` shape (`url`/`title`/`snippet`).
+- Requires the account key (`COMMANDCODE_API_KEY` by default — the same credential the chat providers use). Off by default; enable in the settings card (takes effect immediately after Save, no restart).
+
+## Usage dashboard (optional)
+
+The settings card also shows **account usage** — requests, success rate, cost, tokens, credit balances, and the 5-hour/weekly window limits — fetched Host-side from the account endpoints (`/alpha/whoami`, `/alpha/usage/summary`, `/alpha/billing/credits`, `/alpha/billing/subscriptions`) with the same account key. The key never leaves the host.
+
+- Each endpoint degrades independently: a transient failure shows a partial-data note instead of blanking the card; when every endpoint fails the same way the card names the cause (invalid key / service unavailable / network).
+- The usage endpoints live on the API root (`/alpha/*`), which is distinct from the chat base `/provider/v1`. Use the **Usage / search API base** field in the card if your deployment differs.
+
+## Install
+
+Install directly from GitHub (recommended, `web` profile):
+
+```sh
+pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-plan-autosync
+```
+
+After install, restart dsh Web and go to Settings → Model Providers → find the **CommandCode Plan Sync** card: choose the subscription (default goat), click **Create / Update**.
+
+## API key setup
+
+The plugin reads the `COMMANDCODE_API_KEY` environment variable by default (rename via plugin config `targetApiKeyEnv`).
+
+Two ways to configure the key in dsh:
+
+1. **Credential management** (recommended): configure a credential for `llm-pi-ai`'s `apiKeyEnv` (`COMMANDCODE_API_KEY`) in dsh settings — the key only enters `.credentials.yaml`, never `settings.yaml`.
+2. **Environment variable**: `export COMMANDCODE_API_KEY=cmd_xxx` before starting dsh.
+
+Keys are created on the [commandcode.ai](https://commandcode.ai) Studio API keys page (all tiers except Go; GOAT/Pro/Max bill against subscription credits, Provider plans are pay-as-you-go).
+
+## Configuration
+
+| Field | Default | Description |
+| --- | --- | --- |
+| `sourceURL` | `https://api.commandcode.ai/provider/v1/models` | Official live model list |
+| `catalogURL` | `https://commandcode.ai/docs/plans/goat` | Official GOAT plan page (capability catalog); falls back to the plain list when it fails |
+| `plan` | `goat` | Subscription tier: `goat` / `pro` / `max` |
+| `targetApiKeyEnv` | `COMMANDCODE_API_KEY` | Credential environment variable name |
+| `targetBaseURL` | `https://api.commandcode.ai/provider/v1` | API base URL |
+| `targetCompat` | `{thinkingFormat: "openai", supportsReasoningEffort: true}` | compat override for the openai route |
+| `extraIds` | `[]` | Extra private model ids to write (outside the catalog, into the openai-route provider) |
+| `autoSync` | `false` | Periodic auto-sync (off by default; enable in the card) |
+| `autoSyncIntervalMs` | `6h` | Auto-sync interval (min 60s) |
+| `webSearch` | `false` | Serve dsh's `web_search` with Command Code (`/alpha/web-search`) |
+| `usageBaseURL` | `https://api.commandcode.ai` | API root for usage/search endpoints (`/alpha/*`) |
+
+Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `commandcode-<plan>-anthropic`); no separate configuration needed.
+
+## FAQ
+
+**What happens when I switch tiers?** Pick the new tier in the dropdown and Save, then click **Create / Update**: the new tier's provider is created; the old tier's provider is left untouched (tiers never overwrite each other). Remove a stale provider manually.
+
+**Why is there no `commandcode-goat-anthropic`?** The GOAT tier contains only open models — no Claude — so no Anthropic-route provider is generated.
+
+**How do Claude models work?** The official API requires Claude on `/messages` (Anthropic format). The `pro` / `max` tiers automatically create `commandcode-<plan>-anthropic` (`api: anthropic-messages`); calling a Claude id through an OpenAI-route provider returns 400.
+
+**Why do some models have no reasoning efforts?** The official catalog only marks `reasoning: true/false`, no effort lists. `reasoning: false` models get `reasoningEfforts: false` so dsh never sends thinking parameters; `reasoning: true` models are governed by `compat.supportsReasoningEffort`.
+
+**What if I call a model above my tier?** The catalog filters strictly by `minPlanName`, so written models are all inside the selected tier; when upstream adds a model the catalog has not yet indexed, the plugin writes the full plain list (degraded mode, with a warning in the result).
+
+---
+
+# 简体中文
+
+[English](#dsh-commandcode-plan-autosync) | **简体中文**
+
 一键把 [CommandCode](https://commandcode.ai) 所选订阅档位的模型同步到 DeepSeek Harness 的 `llm-pi-ai` 供应商配置中，并在设置页提供「一键创建/更新」按钮。已存在目标供应商时只刷新模型列表，用户配置的密钥与地址保持不变。
 
 ## 为什么要用这个插件
@@ -32,6 +142,21 @@
 | 其余模型 | 归入 `api: openai-completions` 供应商 |
 
 官方目录没有每个模型的思考档位列表（如 `low/medium/high`），因此插件不臆造档位映射；`reasoning: true` 的模型直接依赖供应商级 `compat: {thinkingFormat: "openai", supportsReasoningEffort: true}`（可通过 `targetCompat` 覆盖）。
+
+## Web 搜索（可选）
+
+开启后，插件的 **Command Code 搜索供应商** 为 dsh 的模型 `web_search` 工具提供后端，走 Command Code Provider API 的 `/alpha/web-search` 端点——与聊天**同一个 API Key、同一个账户**，无需单独配置搜索 key 或端点。
+
+- 注册在 dsh web 能力缝（`ctx.web`）上，provider id 为 `commandcode`；开关开启期间自动被选中（关闭或插件卸载时恢复之前的搜索供应商）。
+- `numResults` 会被钳制在 Command Code 的范围内（1–10，默认 5）；结果映射为 dsh 的 `WebSearchSource` 结构（`url`/`title`/`snippet`）。
+- 需要账户 key（默认 `COMMANDCODE_API_KEY`——与聊天供应商同一个凭据）。默认关闭；在设置卡片里开启（保存后立即生效，无需重启）。
+
+## 用量统计（可选）
+
+设置卡片同时展示**账户用量**——请求数、成功率、成本、Token、额度余额以及 5 小时/周窗口限额——数据在宿主侧用同一个账户 key 从账户端点（`/alpha/whoami`、`/alpha/usage/summary`、`/alpha/billing/credits`、`/alpha/billing/subscriptions`）抓取。key 不会离开宿主。
+
+- 每个端点独立降级：某个端点临时失败时显示局部数据提示而不会清空整卡；当所有端点以同一方式失败时，卡片会点明原因（key 无效 / 服务不可用 / 网络错误）。
+- 用量端点位于 API 根路径（`/alpha/*`），与聊天的 `/provider/v1` 基址不同。如果部署环境不同，请使用卡片中的「用量/搜索 API 地址」字段。
 
 ## 安装
 
@@ -67,6 +192,8 @@ Key 在 [commandcode.ai](https://commandcode.ai) Studio 的 API keys 页面创�
 | `extraIds` | `[]` | 额外写入的私有模型 id（目录之外，进 openai 路由供应商） |
 | `autoSync` | `false` | 定时自动同步（默认关闭，需在卡片里手动开启） |
 | `autoSyncIntervalMs` | `6h` | 自动同步间隔（最小 60s） |
+| `webSearch` | `false` | 用 CommandCode 提供 dsh 的 `web_search`（`/alpha/web-search`） |
+| `usageBaseURL` | `https://api.commandcode.ai` | 用量/搜索端点所在 API 根路径（`/alpha/*`） |
 
 目标供应商名由 `plan` 推导（`commandcode-<plan>-autosync` / `commandcode-<plan>-anthropic`），不需要单独配置。
 

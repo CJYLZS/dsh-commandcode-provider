@@ -5,7 +5,9 @@
 [![DeepSeek Harness](https://img.shields.io/badge/DeepSeek%20Harness-plugin-4D6BFE?style=flat-square)](https://github.com/deepseek-ai/deepseek-harness)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-One-click sync of [CommandCode](https://commandcode.ai) subscription-tier models into DeepSeek Harness' `llm-pi-ai` provider configuration, with a "Create / Update" button in the settings page. Existing target providers are only refreshed (model list updated) — your configured keys and base URLs are preserved.
+> **A lightweight plugin — almost no extra dependencies.** It is plain JavaScript (no build step, no framework), ships only two small files plus a one-file patch, and its sole runtime dependency is `@deepseek-ai/schemastery`, which any dsh plugin already has. Everything else it uses comes from the dsh host itself (`ctx.web`, the settings seam, the credentials seam, the loopback bridge).
+
+One-click sync of [CommandCode](https://commandcode.ai) subscription-tier models into DeepSeek Harness' `llm-pi-ai` provider configuration, with a "Create / Update" button in the settings page. Existing target providers are only refreshed (model list updated) — your configured keys and base URLs are preserved. On top of that, it can replace dsh's built-in web search (no separate search API key needed) and show your CommandCode account usage right in the settings card.
 
 ## Why this plugin
 
@@ -42,6 +44,8 @@ The official catalog has no per-model reasoning-effort list (e.g. `low/medium/hi
 
 When enabled, the plugin's **Command Code search provider** backs dsh's model-facing `web_search` tool via the Command Code Provider API's `/alpha/web-search` endpoint — the **same API key and account** as your chat traffic, so no separate search key or endpoint is configured.
 
+**Why this is useful:** stock dsh ships web search backed by DeepSeek's own Messages API, which means you need a **separate `DEEPSEEK_API_KEY`** (billed on top of whatever you pay for chat) before the model can search at all. With a CommandCode subscription you already have an account key that unlocks search — this plugin reuses that **same key** for search, so you no longer depend on dsh's own search API key. One subscription, one key: chat and search both covered.
+
 - Served on the dsh web seam (`ctx.web`) as provider id `commandcode`, and auto-selected while the toggle is on (restoring the previous search provider when toggled off or when the plugin unloads).
 - `numResults` is clamped to Command Code's range (1–10, default 5); results map to dsh's `WebSearchSource` shape (`url`/`title`/`snippet`).
 - Requires the account key (`COMMANDCODE_API_KEY` by default — the same credential the chat providers use). Off by default; enable in the settings card (takes effect immediately after Save, no restart).
@@ -49,6 +53,8 @@ When enabled, the plugin's **Command Code search provider** backs dsh's model-fa
 ## Usage dashboard (optional)
 
 The settings card also shows **account usage** — requests, success rate, cost, tokens, credit balances, and the 5-hour/weekly window limits — fetched Host-side from the account endpoints (`/alpha/whoami`, `/alpha/usage/summary`, `/alpha/billing/credits`, `/alpha/billing/subscriptions`) with the same account key. The key never leaves the host.
+
+**What you get at a glance:** how many requests you have left in the current five-hour and weekly windows (with progress bars and reset times), how many credits your plan still has this month, and your recent request/success/cost/token totals — so you can see whether a rate-limit or "out of credits" wall is approaching before you hit it, and confirm that a session actually consumed what you expected.
 
 - Each endpoint degrades independently: a transient failure shows a partial-data note instead of blanking the card; when every endpoint fails the same way the card names the cause (invalid key / service unavailable / network).
 - The usage endpoints live on the API root (`/alpha/*`), which is distinct from the chat base `/provider/v1`. Use the **Usage / search API base** field in the card if your deployment differs.
@@ -110,7 +116,9 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 [English](#dsh-commandcode-provider) | **简体中文**
 
-一键把 [CommandCode](https://commandcode.ai) 所选订阅档位的模型同步到 DeepSeek Harness 的 `llm-pi-ai` 供应商配置中，并在设置页提供「一键创建/更新」按钮。已存在目标供应商时只刷新模型列表，用户配置的密钥与地址保持不变。
+> **轻量插件——几乎没有额外依赖。** 纯 JavaScript 实现（无构建步骤、无框架），只附带两个小文件加一个单文件 patch；唯一的运行时依赖是 `@deepseek-ai/schemastery`，而这是任何 dsh 插件本来就会装的。其余能力全部来自 dsh 宿主本身（`ctx.web`、settings 能力缝、凭据能力缝、loopback bridge）。
+
+一键把 [CommandCode](https://commandcode.ai) 所选订阅档位的模型同步到 DeepSeek Harness 的 `llm-pi-ai` 供应商配置中，并在设置页提供「一键创建/更新」按钮。已存在目标供应商时只刷新模型列表，用户配置的密钥与地址保持不变。除此之外，它还能替代 dsh 自带的 web 搜索（无需单独的搜索 API key），并在设置卡片里直接展示你的 CommandCode 账户用量。
 
 ## 为什么要用这个插件
 
@@ -147,6 +155,8 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 开启后，插件的 **Command Code 搜索供应商** 为 dsh 的模型 `web_search` 工具提供后端，走 Command Code Provider API 的 `/alpha/web-search` 端点——与聊天**同一个 API Key、同一个账户**，无需单独配置搜索 key 或端点。
 
+**为什么值得开：** 原版 dsh 的 web 搜索由 DeepSeek 自己的 Messages API 提供，意味着你需要再配一个**单独的 `DEEPSEEK_API_KEY`**（在聊天费用之外另行计费），模型才能搜索。而只要你有 CommandCode 订阅，账户 key 本身就解锁搜索能力——本插件直接复用这把**同一个 key** 做搜索，从此不再依赖 dsh 自己的搜索 API key。一个订阅、一把 key，聊天和搜索都搞定。
+
 - 注册在 dsh web 能力缝（`ctx.web`）上，provider id 为 `commandcode`；开关开启期间自动被选中（关闭或插件卸载时恢复之前的搜索供应商）。
 - `numResults` 会被钳制在 Command Code 的范围内（1–10，默认 5）；结果映射为 dsh 的 `WebSearchSource` 结构（`url`/`title`/`snippet`）。
 - 需要账户 key（默认 `COMMANDCODE_API_KEY`——与聊天供应商同一个凭据）。默认关闭；在设置卡片里开启（保存后立即生效，无需重启）。
@@ -154,6 +164,8 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 ## 用量统计（可选）
 
 设置卡片同时展示**账户用量**——请求数、成功率、成本、Token、额度余额以及 5 小时/周窗口限额——数据在宿主侧用同一个账户 key 从账户端点（`/alpha/whoami`、`/alpha/usage/summary`、`/alpha/billing/credits`、`/alpha/billing/subscriptions`）抓取。key 不会离开宿主。
+
+**一眼看清：** 当前 5 小时/周窗口还剩多少请求（带进度条与重置时间）、本月套餐还剩多少额度，以及最近的请求数/成功率/成本/Token 汇总——在撞上「限流」或「额度耗尽」之前就能提前发现，也能确认某次会话实际消耗是否符合预期。
 
 - 每个端点独立降级：某个端点临时失败时显示局部数据提示而不会清空整卡；当所有端点以同一方式失败时，卡片会点明原因（key 无效 / 服务不可用 / 网络错误）。
 - 用量端点位于 API 根路径（`/alpha/*`），与聊天的 `/provider/v1` 基址不同。如果部署环境不同，请使用卡片中的「用量/搜索 API 地址」字段。

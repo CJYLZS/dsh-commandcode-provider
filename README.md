@@ -11,7 +11,7 @@ One-click sync of [CommandCode](https://commandcode.ai) subscription-tier models
 
 ## Why this plugin
 
-- **dsh's `llm-pi-ai` provider catalog is a static snapshot** that never refreshes itself. CommandCode's [Provider API](https://commandcode.ai/docs/provider) currently lists 61 models and grows continuously (each with its own context/pricing/capabilities). Hand-copying them into `settings.yaml` is impractical and goes stale.
+- **dsh's `llm-pi-ai` provider catalog is a static snapshot** that never refreshes itself. CommandCode's [Provider API](https://commandcode.ai/docs/provider) currently lists 61 models and grows continuously (each with its own context/pricing/capabilities). Hand-copying them into the provider configuration is impractical and goes stale.
 - **The official `/provider/v1/models` endpoint returns only id / name / context_length** — no reasoning or vision capability info. This plugin additionally parses the complete per-model catalog embedded in the official [GOAT plan page](https://commandcode.ai/docs/plans/goat) (`reasoning` / `vision` / `caps` / four pricing fields / min plan) and maps capabilities correctly into dsh config.
 - **Subscription tiers**: CommandCode has multiple tiers (Go / GOAT / Pro / Max); models accrue by `minPlanName`. The plugin offers a "Subscription" dropdown; each tier maps to its **own independent model provider**, so tiers never overwrite each other.
 - **Mixed routing**: CommandCode serves both an OpenAI-compatible (`/chat/completions`) and an Anthropic-compatible (`/messages`) endpoint; sending Claude models to the wrong endpoint returns 400. The plugin splits models automatically: Claude models go into `commandcode-<plan>-anthropic` (`api: anthropic-messages`), everything else into `commandcode-<plan>-autosync` (`api: openai-completions`).
@@ -63,13 +63,33 @@ The settings card also shows **account usage** — requests, success rate, cost,
 
 ## Install
 
-Install directly from GitHub (recommended, `web` profile):
+The settings page rides dsh's settings API, which changed in the `0.1.7-alpha.1` line, so pick the plugin tag that matches the dsh you run:
+
+| dsh | Plugin | Install (`web` profile) |
+| --- | --- | --- |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
+| `0.1.5-rc.3` and older | `v0.1.3` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.1.3` |
+
+`#<ref>` is the Git ref the install resolves. Without one, the repository's default branch is installed, which tracks the newest line.
+
+For a local checkout, link the directory instead of copying it — a later edit applies on the next restart, with no reinstall:
 
 ```sh
-pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider
+dsh plugin --profile web add link:/absolute/path/to/dsh-commandcode-provider
 ```
 
-After install, restart dsh Web and go to Settings → Model Providers → find the **CommandCode Plan Sync** card: choose the subscription (default goat), click **Create / Update**.
+Restart dsh Web after installing, then open **Plugins** in the sidebar, open the **dsh-commandcode-provider** bundle card, and use **Configure** on its row: choose the subscription (default `goat`) and click **Create / Update**.
+
+### dsh compatibility
+
+| dsh | Plugin | Settings surface |
+| --- | --- | --- |
+| `≥ 0.1.7-alpha.1` | `v0.2.0` | The profile entry's own volatile `Config` fields, edited on the Plugins page |
+| `≤ 0.1.5-rc.3` | `v0.1.3` | A registered settings section (`settings.register` / `installSection`), listed with the model providers |
+
+`v0.2.0` reads and writes its configuration as live references of its own Cordis `Config`, and its browser half registers into the Plugins page's `plugins.row.config`. `v0.1.3` uses the removed `settings.register` / `installSection` API and the retired `settings.plugin.item` slot, so it does not load on `0.1.7-alpha.1` or later.
+
+A mismatch shows up as `web boot: 1 entry did not activate … pending (waiting for service: settingsScope)` in the browser, and as `settings.register is not a function` for this package in `$DSH_HOME/logs/startup-*.log` when running `v0.1.3` on the newer dsh.
 
 ## API key setup
 
@@ -129,7 +149,7 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 ## 为什么要用这个插件
 
-- **DSH 的 llm-pi-ai 供应商目录是静态快照**，不会自己刷新。CommandCode 的 [Provider API](https://commandcode.ai/docs/provider) 现有 61 个模型且持续上新（每款有各自的上下文/价格/能力），手抄进 `settings.yaml` 既不现实也容易过期。
+- **DSH 的 llm-pi-ai 供应商目录是静态快照**，不会自己刷新。CommandCode 的 [Provider API](https://commandcode.ai/docs/provider) 现有 61 个模型且持续上新（每款有各自的上下文/价格/能力），手抄进供应商配置既不现实也容易过期。
 - **官方的 `/provider/v1/models` 接口只返回 id / name / context_length**，没有任何推理（thinking）或视觉能力信息。插件额外解析官方 [GOAT 计划页](https://commandcode.ai/docs/plans/goat) 内嵌的完整目录（每模型含 `reasoning` / `vision` / `caps` / 四项定价 / 最低计划要求），把能力正确映射进 DSH 配置。
 - **订阅分档**：CommandCode 区分多个档位（Go / GOAT / Pro / Max），模型按 `minPlanName` 累计归属。插件提供「订阅类型」下拉框，每个档位对应**独立的模型供应商**，互不覆盖。
 - **混合路由问题**：CommandCode 提供 OpenAI 兼容（`/chat/completions`）与 Anthropic 兼容（`/messages`）两套端点，Claude 系列走错端点会直接 400。插件按模型自动拆分：Claude 进 `commandcode-<档位>-anthropic`（`api: anthropic-messages`），其余进 `commandcode-<档位>-autosync`（`api: openai-completions`）。
@@ -181,13 +201,33 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 ## 安装
 
-推荐直接从 GitHub 安装（`web` profile）：
+设置页依赖 dsh 的 settings API，而它在 `0.1.7-alpha.1` 这一代有变更，所以请按你正在运行的 dsh 选择插件 tag：
+
+| dsh | 插件版本 | 安装命令（`web` profile） |
+| --- | --- | --- |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
+| `0.1.5-rc.3` 及更早 | `v0.1.3` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.1.3` |
+
+`#<ref>` 就是安装时解析的 Git ref。不写时安装仓库默认分支，也就是最新的一代。
+
+本地检出则用链接方式安装，避免拷贝——之后每次改动在重启后生效，不需要重新安装：
 
 ```sh
-pnpm dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider
+dsh plugin --profile web add link:/absolute/path/to/dsh-commandcode-provider
 ```
 
-安装后重启 DSH Web，进入 设置 → 模型供应商，找到「CommandCode 计划同步」卡片：选择订阅类型（默认 goat），点击 **一键创建/更新**。
+安装后重启 DSH Web，打开侧边栏的 **插件（Plugins）** 页，进入 **dsh-commandcode-provider** 这个 bundle 卡片，在该行的 **配置（Configure）** 里选择订阅类型（默认 goat），点击 **一键创建/更新**。
+
+### dsh 兼容性
+
+| dsh | 插件版本 | 设置界面 |
+| --- | --- | --- |
+| `≥ 0.1.7-alpha.1` | `v0.2.0` | profile 条目自身 Config 的 volatile 字段，在插件页编辑 |
+| `≤ 0.1.5-rc.3` | `v0.1.3` | 注册式设置节（`settings.register` / `installSection`），与模型供应商并列显示 |
+
+`v0.2.0` 把配置读写为自身 Cordis `Config` 的实时引用，浏览器半侧注册进插件页的 `plugins.row.config`；`v0.1.3` 用的是已被删除的 `settings.register` / `installSection` 与已退役的 `settings.plugin.item`，因此在 `0.1.7-alpha.1` 及之后无法加载。
+
+版本不匹配时的表现：浏览器里 `web boot: 1 entry did not activate … pending (waiting for service: settingsScope)`；在新版 dsh 上运行 `v0.1.3` 时，`$DSH_HOME/logs/startup-*.log` 里本包会有 `settings.register is not a function`。
 
 ## API Key 配置
 

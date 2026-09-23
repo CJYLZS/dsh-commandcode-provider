@@ -35,12 +35,12 @@ Tiers are **cumulative** (defined by the `minPlanName` field, matching the offic
 | `contextWindow` / `context_length` | `contextWindow` |
 | `vision: true` | `input: ["text", "image"]` (else `["text"]`) |
 | `reasoning: false` | `reasoningEfforts: false` (disable thinking parameters) |
-| `reasoning: true` | no `reasoningEfforts` written; governed by provider `compat.supportsReasoningEffort` |
+| `reasoning: true` | `reasoningEfforts: {low: low, medium: medium, high: high, xhigh: xhigh, max: max}` |
 | `minPlanName` | filters models by the selected tier |
 | `vendor: Anthropic` (or id starting with `claude-`) | routed into the `api: anthropic-messages` provider |
 | everything else | routed into the `api: openai-completions` provider |
 
-The official catalog has no per-model reasoning-effort list (e.g. `low/medium/high`), so the plugin does not invent one; `reasoning: true` models rely on the provider-level `compat: {thinkingFormat: "openai", supportsReasoningEffort: true}` (overridable via `targetCompat`).
+The catalog marks only `reasoning: true/false`, no per-model levels, so the map is the identity over the levels the endpoint itself accepts: a `reasoning_effort` outside `low|medium|high|xhigh|max` is refused with HTTP 400 naming that set. The map is what tells dsh the model reasons at all — without it dsh treats the model as non-reasoning (no levels in the picker, no reasoning parameter on the wire), while the provider-level `compat: {thinkingFormat: "openai", supportsReasoningEffort: true}` only decides *how* the chosen level is sent (overridable via `targetCompat`).
 
 ## Web search (optional)
 
@@ -67,7 +67,7 @@ The settings page rides dsh's settings API, which changed in the `0.1.7-alpha.1`
 
 | dsh | Plugin | Install (`web` profile) |
 | --- | --- | --- |
-| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.1` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.1` |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.2` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.2` |
 | `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0` (Plugins page only) | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
 | `0.1.5-rc.3` and older | `v0.1.3` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.1.3` |
 
@@ -85,11 +85,11 @@ Restart dsh Web after installing, then open **Settings → CommandCode**, or the
 
 | dsh | Plugin | Settings surface |
 | --- | --- | --- |
-| `≥ 0.1.7-alpha.1` | `v0.2.1` | A page of its own in Settings (`settings.section`, nav label **CommandCode**), beside the Plugins page's row configuration |
-| `≥ 0.1.7-alpha.1` | `v0.2.0` | The Plugins page's row configuration (`plugins.row.config`) only |
+| `≥ 0.1.7-alpha.1` | `v0.2.2` | A page of its own in Settings (`settings.section`, nav label **CommandCode**), beside the Plugins page's row configuration; writes model reasoning maps and runs auto-sync |
+| `≥ 0.1.7-alpha.1` | `v0.2.0` | The Plugins page's row configuration (`plugins.row.config`) only, with no Settings page |
 | `≤ 0.1.5-rc.3` | `v0.1.3` | A registered settings section (`settings.register` / `installSection`), listed with the model providers |
 
-`v0.2.1` and `v0.2.0` both read and write their configuration as live references of their own Cordis `Config`; `v0.2.1` adds the standalone Settings page. `v0.1.3` uses the removed `settings.register` / `installSection` API and the retired `settings.plugin.item` slot, so it does not load on `0.1.7-alpha.1` or later.
+`v0.2.2` and `v0.2.0` both read and write their configuration as live references of their own Cordis `Config`; `v0.2.2` adds the standalone Settings page and writes the reasoning maps by default, which is what makes the model picker offer thinking levels at all. `v0.1.3` uses the removed `settings.register` / `installSection` API and the retired `settings.plugin.item` slot, so it does not load on `0.1.7-alpha.1` or later.
 
 A mismatch shows up as `web boot: 1 entry did not activate … pending (waiting for service: settingsScope)` in the browser, and as `settings.register is not a function` for this package in `$DSH_HOME/logs/startup-*.log` when running `v0.1.3` on the newer dsh.
 
@@ -120,6 +120,7 @@ Where does the key come from? Create one on the [commandcode.ai](https://command
 | `targetBaseURL` | `https://api.commandcode.ai/provider/v1` | API base URL |
 | `targetCompat` | `{thinkingFormat: "openai", supportsReasoningEffort: true}` | compat override for the openai route |
 | `extraIds` | `[]` | Extra private model ids to write (outside the catalog, into the openai-route provider) |
+| `includeReasoningEfforts` | `true` | Write the `low…max` reasoning map for catalog-reasoning models; turning it off makes dsh treat them as non-reasoning |
 | `autoSync` | `false` | Periodic auto-sync (off by default; enable in the card) |
 | `autoSyncIntervalMs` | `6h` | Auto-sync interval (min 60s) |
 | `webSearch` | `false` | Serve dsh's `web_search` with Command Code (`/alpha/web-search`) |
@@ -135,7 +136,7 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 **How do Claude models work?** The official API requires Claude on `/messages` (Anthropic format). The `pro` / `max` tiers automatically create `commandcode-<plan>-anthropic` (`api: anthropic-messages`); calling a Claude id through an OpenAI-route provider returns 400.
 
-**Why do some models have no reasoning efforts?** The official catalog only marks `reasoning: true/false`, no effort lists. `reasoning: false` models get `reasoningEfforts: false` so dsh never sends thinking parameters; `reasoning: true` models are governed by `compat.supportsReasoningEffort`.
+**Why do some models have no reasoning levels?** Only the ones the catalog marks `reasoning: false`: they get `reasoningEfforts: false`, so dsh sends no thinking parameter and the picker offers no levels. Every `reasoning: true` model gets the `low…max` map — that map is what puts the levels in the picker at all. The model list and these maps are rewritten on sync, so after changing an option click **Create / Update** (or let auto-sync run) before the provider config carries it.
 
 **What if I call a model above my tier?** The catalog filters strictly by `minPlanName`, so written models are all inside the selected tier; when upstream adds a model the catalog has not yet indexed, the plugin writes the full plain list (degraded mode, with a warning in the result).
 
@@ -175,12 +176,12 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 | `contextWindow` / `context_length` | `contextWindow` |
 | `vision: true` | `input: ["text", "image"]`（否则 `["text"]`） |
 | `reasoning: false` | `reasoningEfforts: false`（禁用思考参数） |
-| `reasoning: true` | 不写 `reasoningEfforts`，由供应商 `compat.supportsReasoningEffort` 决定 |
+| `reasoning: true` | `reasoningEfforts: {low: low, medium: medium, high: high, xhigh: xhigh, max: max}` |
 | `minPlanName` | 按所选档位过滤模型 |
 | `vendor: Anthropic`（或 id 以 `claude-` 开头） | 归入 `api: anthropic-messages` 供应商 |
 | 其余模型 | 归入 `api: openai-completions` 供应商 |
 
-官方目录没有每个模型的思考档位列表（如 `low/medium/high`），因此插件不臆造档位映射；`reasoning: true` 的模型直接依赖供应商级 `compat: {thinkingFormat: "openai", supportsReasoningEffort: true}`（可通过 `targetCompat` 覆盖）。
+官方目录只标注 `reasoning: true/false`，没有每个模型的档位列表，所以这份映射取的是端点自己接受的档位字面量：`reasoning_effort` 只要不是 `low|medium|high|xhigh|max`，就会收到 HTTP 400 并被告知这一集合。这份映射同时是 dsh 判定「该模型会思考」的依据——没有它，dsh 会把模型当作不支持思考（选择器里没有挡位、请求也不带思考参数）；供应商级 `compat: {thinkingFormat: "openai", supportsReasoningEffort: true}` 只决定选中的档位**怎么发**（可通过 `targetCompat` 覆盖）。
 
 ## Web 搜索（可选）
 
@@ -207,7 +208,7 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 | dsh | 插件版本 | 安装命令（`web` profile） |
 | --- | --- | --- |
-| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.1` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.1` |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.2` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.2` |
 | `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0`（仅插件页） | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
 | `0.1.5-rc.3` 及更早 | `v0.1.3` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.1.3` |
 
@@ -225,11 +226,11 @@ dsh plugin --profile web add link:/absolute/path/to/dsh-commandcode-provider
 
 | dsh | 插件版本 | 设置界面 |
 | --- | --- | --- |
-| `≥ 0.1.7-alpha.1` | `v0.2.1` | 设置页里独立的 **CommandCode** 页（`settings.section`），与插件页的行配置并存 |
-| `≥ 0.1.7-alpha.1` | `v0.2.0` | 仅插件页的行配置（`plugins.row.config`） |
+| `≥ 0.1.7-alpha.1` | `v0.2.2` | 设置页里独立的 **CommandCode** 页（`settings.section`），与插件页的行配置并存；会写入模型思考档位映射并真正执行自动同步 |
+| `≥ 0.1.7-alpha.1` | `v0.2.0` | 仅插件页的行配置（`plugins.row.config`），没有设置页 |
 | `≤ 0.1.5-rc.3` | `v0.1.3` | 注册式设置节（`settings.register` / `installSection`），与模型供应商并列显示 |
 
-`v0.2.1` 与 `v0.2.0` 都把配置读写为自身 Cordis `Config` 的实时引用，`v0.2.1` 在此之上增加了设置页里的独立页面；`v0.1.3` 用的是已被删除的 `settings.register` / `installSection` 与已退役的 `settings.plugin.item`，因此在 `0.1.7-alpha.1` 及之后无法加载。
+`v0.2.2` 与 `v0.2.0` 都把配置读写为自身 Cordis `Config` 的实时引用；`v0.2.2` 在此之上增加了设置页里的独立页面，并默认写入思考档位映射——正是它让模型选择器里出现思考挡位；`v0.1.3` 用的是已被删除的 `settings.register` / `installSection` 与已退役的 `settings.plugin.item`，因此在 `0.1.7-alpha.1` 及之后无法加载。
 
 版本不匹配时的表现：浏览器里 `web boot: 1 entry did not activate … pending (waiting for service: settingsScope)`；在新版 dsh 上运行 `v0.1.3` 时，`$DSH_HOME/logs/startup-*.log` 里本包会有 `settings.register is not a function`。
 
@@ -260,6 +261,7 @@ Key 从哪来？在 [commandcode.ai](https://commandcode.ai) Studio 的 API keys
 | `targetBaseURL` | `https://api.commandcode.ai/provider/v1` | API 基地址 |
 | `targetCompat` | `{thinkingFormat: "openai", supportsReasoningEffort: true}` | openai 路由的 compat 覆盖 |
 | `extraIds` | `[]` | 额外写入的私有模型 id（目录之外，进 openai 路由供应商） |
+| `includeReasoningEfforts` | `true` | 给目录里标 `reasoning: true` 的模型写入 `low…max` 档位映射；关掉后 dsh 会把它们当作不支持思考 |
 | `autoSync` | `false` | 定时自动同步（默认关闭，需在卡片里手动开启） |
 | `autoSyncIntervalMs` | `6h` | 自动同步间隔（最小 60s） |
 | `webSearch` | `false` | 用 CommandCode 提供 dsh 的 `web_search`（`/alpha/web-search`） |
@@ -275,6 +277,6 @@ Key 从哪来？在 [commandcode.ai](https://commandcode.ai) Studio 的 API keys
 
 **Claude 模型怎么用？** 官方 API 要求 Claude 走 `/messages`（Anthropic 格式）。`pro` / `max` 档自动创建 `commandcode-<plan>-anthropic` 供应商（`api: anthropic-messages`）；若在 OpenAI 路由供应商里调用 Claude id，会得到 400。
 
-**为什么有些模型没有思考档位？** 官方目录只标注 `reasoning: true/false`，不提供档位枚举。`reasoning: false` 的模型写入 `reasoningEfforts: false` 防止 DSH 发送思考参数；`reasoning: true` 的模型由 `compat.supportsReasoningEffort` 统一放行。
+**为什么有些模型没有思考档位？** 只有目录里标了 `reasoning: false` 的那些：它们写入 `reasoningEfforts: false`，dsh 因此不发思考参数，选择器里也不给档位。标 `reasoning: true` 的模型一律写入 `low…max` 映射——正是这份映射让挡位出现在选择器里。模型列表和映射都在同步时才重写：改了选项后要点一次「一键创建/更新」（或等自动同步跑一轮）才会落到供应商配置里。
 
 **调用超出档位的模型会怎样？** 目录按 `minPlanName` 严格过滤，写入的模型都在所选档位内；上游列表若新增模型而目录尚未收录，插件会按纯列表写入全部（降级模式，结果中带 warning 提示）。

@@ -1,6 +1,6 @@
 {
   "name": "dsh-commandcode-provider",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Sync CommandCode plan models (goat/pro/max) from the official models API + GOAT plan catalog into llm-pi-ai providers commandcode-<plan>-autosync (one-click create/update in settings).",
   "type": "module",
   "main": "lib/index.js",

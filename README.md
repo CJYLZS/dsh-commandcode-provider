@@ -67,7 +67,8 @@ The settings page rides dsh's settings API, which changed in the `0.1.7-alpha.1`
 
 | dsh | Plugin | Install (`web` profile) |
 | --- | --- | --- |
-| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.1` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.1` |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0` (Plugins page only) | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
 | `0.1.5-rc.3` and older | `v0.1.3` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.1.3` |
 
 `#<ref>` is the Git ref the install resolves. Without one, the repository's default branch is installed, which tracks the newest line.
@@ -78,16 +79,17 @@ For a local checkout, link the directory instead of copying it — a later edit 
 dsh plugin --profile web add link:/absolute/path/to/dsh-commandcode-provider
 ```
 
-Restart dsh Web after installing, then open **Plugins** in the sidebar, open the **dsh-commandcode-provider** bundle card, and use **Configure** on its row: choose the subscription (default `goat`) and click **Create / Update**.
+Restart dsh Web after installing, then open **Settings → CommandCode**, or the **Plugins** page's bundle card and **Configure** on its row — both mount the same page. Choose the subscription (default `goat`) and click **Create / Update**.
 
 ### dsh compatibility
 
 | dsh | Plugin | Settings surface |
 | --- | --- | --- |
-| `≥ 0.1.7-alpha.1` | `v0.2.0` | The profile entry's own volatile `Config` fields, edited on the Plugins page |
+| `≥ 0.1.7-alpha.1` | `v0.2.1` | A page of its own in Settings (`settings.section`, nav label **CommandCode**), beside the Plugins page's row configuration |
+| `≥ 0.1.7-alpha.1` | `v0.2.0` | The Plugins page's row configuration (`plugins.row.config`) only |
 | `≤ 0.1.5-rc.3` | `v0.1.3` | A registered settings section (`settings.register` / `installSection`), listed with the model providers |
 
-`v0.2.0` reads and writes its configuration as live references of its own Cordis `Config`, and its browser half registers into the Plugins page's `plugins.row.config`. `v0.1.3` uses the removed `settings.register` / `installSection` API and the retired `settings.plugin.item` slot, so it does not load on `0.1.7-alpha.1` or later.
+`v0.2.1` and `v0.2.0` both read and write their configuration as live references of their own Cordis `Config`; `v0.2.1` adds the standalone Settings page. `v0.1.3` uses the removed `settings.register` / `installSection` API and the retired `settings.plugin.item` slot, so it does not load on `0.1.7-alpha.1` or later.
 
 A mismatch shows up as `web boot: 1 entry did not activate … pending (waiting for service: settingsScope)` in the browser, and as `settings.register is not a function` for this package in `$DSH_HOME/logs/startup-*.log` when running `v0.1.3` on the newer dsh.
 
@@ -205,7 +207,8 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 
 | dsh | 插件版本 | 安装命令（`web` profile） |
 | --- | --- | --- |
-| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.1` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.1` |
+| `0.1.7-alpha.1` … `<0.2.0` | `v0.2.0`（仅插件页） | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.2.0` |
 | `0.1.5-rc.3` 及更早 | `v0.1.3` | `dsh plugin --profile web add github:CJYLZS/dsh-commandcode-provider#v0.1.3` |
 
 `#<ref>` 就是安装时解析的 Git ref。不写时安装仓库默认分支，也就是最新的一代。
@@ -216,16 +219,17 @@ Target provider names are derived from `plan` (`commandcode-<plan>-autosync` / `
 dsh plugin --profile web add link:/absolute/path/to/dsh-commandcode-provider
 ```
 
-安装后重启 DSH Web，打开侧边栏的 **插件（Plugins）** 页，进入 **dsh-commandcode-provider** 这个 bundle 卡片，在该行的 **配置（Configure）** 里选择订阅类型（默认 goat），点击 **一键创建/更新**。
+安装后重启 DSH Web，打开 **设置 → CommandCode**，或从 **插件（Plugins）** 页进入本 bundle 卡片并在该行点 **配置（Configure）**——两处打开的是同一个页面。选择订阅类型（默认 goat），点击 **一键创建/更新**。
 
 ### dsh 兼容性
 
 | dsh | 插件版本 | 设置界面 |
 | --- | --- | --- |
-| `≥ 0.1.7-alpha.1` | `v0.2.0` | profile 条目自身 Config 的 volatile 字段，在插件页编辑 |
+| `≥ 0.1.7-alpha.1` | `v0.2.1` | 设置页里独立的 **CommandCode** 页（`settings.section`），与插件页的行配置并存 |
+| `≥ 0.1.7-alpha.1` | `v0.2.0` | 仅插件页的行配置（`plugins.row.config`） |
 | `≤ 0.1.5-rc.3` | `v0.1.3` | 注册式设置节（`settings.register` / `installSection`），与模型供应商并列显示 |
 
-`v0.2.0` 把配置读写为自身 Cordis `Config` 的实时引用，浏览器半侧注册进插件页的 `plugins.row.config`；`v0.1.3` 用的是已被删除的 `settings.register` / `installSection` 与已退役的 `settings.plugin.item`，因此在 `0.1.7-alpha.1` 及之后无法加载。
+`v0.2.1` 与 `v0.2.0` 都把配置读写为自身 Cordis `Config` 的实时引用，`v0.2.1` 在此之上增加了设置页里的独立页面；`v0.1.3` 用的是已被删除的 `settings.register` / `installSection` 与已退役的 `settings.plugin.item`，因此在 `0.1.7-alpha.1` 及之后无法加载。
 
 版本不匹配时的表现：浏览器里 `web boot: 1 entry did not activate … pending (waiting for service: settingsScope)`；在新版 dsh 上运行 `v0.1.3` 时，`$DSH_HOME/logs/startup-*.log` 里本包会有 `settings.register is not a function`。
 
